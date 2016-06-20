@@ -3,10 +3,10 @@ rm(list = ls())
 library(forecast)
 library(lubridate)
 source("./R/custAutoArima.R")
-dir = "./data/demo"
+dir = "./data/aggregated/monthly/breakfast"
+source("./R/PromoAnalysis/PEDcalculator.R")
 files = list.files(path = dir,pattern = "*.csv")
 for(file in files) {
-  browser()
   f = paste(dir,"/",file,sep = "")
   t = read.csv(file = f,header = T,sep = ",",stringsAsFactors = F)
   nr = nrow(t)
@@ -33,9 +33,27 @@ for(file in files) {
   
   ts1 = ts(data = t2$LOG_UNITS,start = c(startYear,startMonth)
            ,frequency = 12)
-  model = auto.arima(x = ts1,xreg = 
-                       as.matrix(t2[
-                         ,c("LOG_PRICE")]))
+  
+  print(ts1)
+  LOG_PRICE_MATRIX = as.matrix(t2[,c("LOG_PRICE")])
+  model = auto.arima(x = ts1,xreg =  LOG_PRICE_MATRIX)
+  m3 = lm(formula = LOG_UNITS ~ LOG_PRICE,data = t2)
+  browser()
+  ped1 = model$coef["LOG_PRICE_MATRIX"]
+  ped2 = m3$coef["LOG_PRICE"]
+  ts2 = ts(data = t2$UNITS,start = c(startYear,startMonth)
+           ,frequency = 12)
+  r = calc.own.ped.ts(y.ts = ts2,own.price = t2$PRICE)
+  ped3 = r$PED
+  ped =0 
+  if(abs(ped1-ped2)/ped1 < 0.2) {
+    print("PED the same from two methods")
+    ped = ped1
+  }
+  if(ped < 0 ) {
+    print("PED detected")
+    print(ped1)
+  }
   print(summary(model))
   h= 12
   
